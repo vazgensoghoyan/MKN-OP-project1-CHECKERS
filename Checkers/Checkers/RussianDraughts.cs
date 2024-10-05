@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using static System.Math;
+using System.Text.RegularExpressions;
 
 namespace Checkers;
 
@@ -37,7 +38,7 @@ public class RussianDraughts
 
             ReadMove(out int[] move);
 
-            var (x, y, z, w) = (--move[0], --move[1], --move[2], --move[3]);
+            var (x, y, z, w) = (move[0], move[1], move[2], move[3]);
 
             Move(x, y, z, w);
 
@@ -46,40 +47,47 @@ public class RussianDraughts
         } 
         catch (Exception e)
         {
-            ThrowException();
+            Console.WriteLine( e.Message );
         }
         
     }
 
     private void Move(int x, int y, int z, int w)
     {
-        if ( IsEmpty(x, y) || IsWhite(x, y) != _whitesMove)
-            throw new Exception();
+        if ( IsEmpty(x, y) )
+            throw new Exception("Клетка не пуста!");
 
-        // not right logic
+        if ( IsWhite(x, y) != _whitesMove )
+            throw new Exception("Выбрана шашка не того цвета!");
+
+        if ( !IsRightSingleMove(x, y, z, w) )
+            throw new Exception("Такой ход невозможен! Читайте правила");
+
         _board[x, y] = Figure.None;
         _board[z, w] = _whitesMove ? Figure.WhiteMan : Figure.BlackMan;
     }
+
+    private bool IsRightSingleMove(int x, int y, int z, int w)
+        => Abs(y - w) == 1 && Abs(x - z) == 1 && ( _whitesMove == (x - z == 1) );
 
     private bool IsEmpty(int x, int y) => _board[x, y] == Figure.None;
 
     private bool IsWhite(int x, int y) => _board[x, y] is Figure.WhiteMan or Figure.WhiteKing;
 
-    private bool ReadMove(out int[] move)
+    private bool ReadMove(out int[] m)
     {
         var s = Console.ReadLine();
 
         if ( s is null || !new Regex("[1-8] [1-8] [1-8] [1-8]").IsMatch(s) )
-            throw new Exception();
+            throw new IncorrectDataException();
 
-        move = s.Split().Select( s => Convert.ToInt32(s) ).ToArray();
+        m = s.Split().Select( s => Convert.ToInt32(s) ).ToArray();
+        
+        // human move -> indexes in array
+        ( m[0], m[1] ) = ( 8 - m[1], m[0] - 1 );
+        ( m[2], m[3] ) = ( 8 - m[3], m[2] - 1);
 
         return true;
-    }
-
-    private void ThrowException()
-    {
-        Console.WriteLine("Введены неверные данные");
     }
 
     public override string ToString()
