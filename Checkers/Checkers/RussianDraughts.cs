@@ -9,6 +9,12 @@ public class RussianDraughts
     private bool _whitesMove;
     private bool _gameOn;
 
+    private readonly Figure None = new(Color.None, Role.None);
+    private readonly Figure WhiteMan = new(Color.White, Role.Man);
+    private readonly Figure BlackMan = new(Color.Black, Role.Man);
+    private readonly Figure WhiteKing = new(Color.White, Role.King);
+    private readonly Figure BlackKing = new(Color.Black, Role.King);
+
     public RussianDraughts()
     {
         _board = new Figure[8, 8];
@@ -21,10 +27,10 @@ public class RussianDraughts
             {
                 if (row is 3 or 4 || (row + col) % 2 == 0)
                 {
-                    _board[row, col] = Figure.None;
+                    _board[row, col] = None;
                     continue;
                 }
-                _board[row, col] = (row < 3) ? Figure.BlackMan : Figure.WhiteMan;
+                _board[row, col] = (row < 3) ? BlackMan : WhiteMan;
             }
         }
     }
@@ -62,17 +68,17 @@ public class RussianDraughts
 
         if ( !IsRightSingleMove(x, y, z, w) )
             throw new Exception("Такой ход невозможен! Читайте правила");
-
-        _board[x, y] = Figure.None;
-        _board[z, w] = _whitesMove ? Figure.WhiteMan : Figure.BlackMan;
+        
+        _board[z, w] = _board[x, y];
+        _board[x, y] = None;
     }
 
     private bool IsRightSingleMove(int x, int y, int z, int w)
         => Abs(y - w) == 1 && Abs(x - z) == 1 && ( _whitesMove == (x - z == 1) );
 
-    private bool IsEmpty(int x, int y) => _board[x, y] == Figure.None;
+    private bool IsEmpty(int x, int y) => _board[x, y] == None;
 
-    private bool IsWhite(int x, int y) => _board[x, y] is Figure.WhiteMan or Figure.WhiteKing;
+    private bool IsWhite(int x, int y) => _board[x, y].Color == Color.White;
 
     private bool ReadMove(out int[] m)
     {
@@ -98,7 +104,7 @@ public class RussianDraughts
         {
             for (int j = 0; j < 8; j++)
             {
-                result += ((int)_board[i, j]).ToString() + ' ';
+                result += _board[i, j].ToString() + ' ';
             }
             result += '\n';
         }
