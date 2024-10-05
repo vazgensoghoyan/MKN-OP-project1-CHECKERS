@@ -2,4 +2,10 @@
 
 var a = new RussianDraughts();
 
-Console.WriteLine( a );
+Console.Write( a );
+
+while (a.IsGameOn())
+{
+    a.NextMove();
+    Console.Write(a);
+}
