@@ -2,6 +2,8 @@
 
 var a = new RussianDraughts();
 
+Console.WriteLine( RussianDraughts.GetTheRules() );
+
 Console.Write( a );
 
 while (a.IsGameOn())

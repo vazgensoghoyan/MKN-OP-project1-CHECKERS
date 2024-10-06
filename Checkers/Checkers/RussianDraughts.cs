@@ -9,11 +9,11 @@ public class RussianDraughts
     private bool _whitesMove;
     private bool _gameOn;
 
-    private readonly Figure None = new(Color.None, Role.None);
-    private readonly Figure WhiteMan = new(Color.White, Role.Man);
-    private readonly Figure BlackMan = new(Color.Black, Role.Man);
-    private readonly Figure WhiteKing = new(Color.White, Role.King);
-    private readonly Figure BlackKing = new(Color.Black, Role.King);
+    private static readonly Figure None = new(Color.None, Role.None);
+    private static readonly Figure WhiteMan = new(Color.White, Role.Man);
+    private static readonly Figure BlackMan = new(Color.Black, Role.Man);
+    private static readonly Figure WhiteKing = new(Color.White, Role.King);
+    private static readonly Figure BlackKing = new(Color.Black, Role.King);
 
     public RussianDraughts()
     {
@@ -84,16 +84,35 @@ public class RussianDraughts
     {
         var s = Console.ReadLine();
 
-        if ( s is null || !new Regex("[1-8] [1-8] [1-8] [1-8]").IsMatch(s) )
+        if ( s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s) )
             throw new IncorrectDataException();
 
-        m = s.Split().Select( s => Convert.ToInt32(s) ).ToArray();
+        var split = s.Split().Where(a => a.Length > 0).ToArray();
+
+        m = [ split[0][0] - 'a', split[0][1] - '1', 
+              split[1][0] - 'a', split[1][1] - '1' ];
         
         // human move -> indexes in array
-        ( m[0], m[1] ) = ( 8 - m[1], m[0] - 1 );
-        ( m[2], m[3] ) = ( 8 - m[3], m[2] - 1);
+        ( m[0], m[1] ) = ( 7 - m[1], m[0] );
+        ( m[2], m[3] ) = ( 7 - m[3], m[2] );
 
         return true;
+    }
+
+    public static string GetTheRules()
+    {
+        return "----------------------------------------------------------------------------------------------------------\n" +
+            "Правила хода\r\n\r\n    " +
+            "Простая шашка ходит по диагонали вперёд на одну клетку.\r\n    " +
+            "Дамка ходит по диагонали на любое свободное поле как вперёд, так и назад, но не может перескакивать свои шашки или дамки.\r\n\r\n" +
+            "Правила взятия\r\n\r\n    " +
+            "Взятие обязательно. Побитые шашки и дамки снимаются только после завершения хода.\r\n    " +
+            "Простая шашка, находящаяся рядом с шашкой соперника, за которой имеется свободное поле, переносится через эту шашку на это свободное поле. Если есть возможность продолжить взятие других шашек соперника, то это взятие продолжается, пока бьющая шашка не достигнет положения, из которого бой невозможен. Взятие простой шашкой производится как вперёд, так и назад.\r\n    " +
+            "Дамка бьёт по диагонали, как вперёд, так и назад, и становится на любое свободное поле после побитой шашки. Аналогично, дамка может бить несколько фигур соперника и должна бить до тех пор, пока это возможно.\r\n    " +
+            "При бое через дамочное поле простая шашка превращается в дамку и продолжает бой по правилам дамки.\r\n    " +
+            "При взятии применяется правило турецкого удара — за один ход шашку противника можно побить только один раз. То есть, если при бое нескольких шашек противника шашка или дамка повторно выходит на уже побитую шашку, то ход останавливается.\r\n    " +
+            "При нескольких вариантах взятия, например, одну шашку или две, игрок выбирает вариант взятия по своему усмотрению.\n" +
+            "----------------------------------------------------------------------------------------------------------\n";
     }
 
     public override string ToString()
@@ -102,12 +121,17 @@ public class RussianDraughts
 
         for (int i = 0; i < 8; i++)
         {
+            result += (8 - i).ToString() + ' ';
+
             for (int j = 0; j < 8; j++)
             {
                 result += _board[i, j].ToString() + ' ';
             }
+
             result += '\n';
         }
+
+        result += "  a b c d e f g h\n";
 
         return result;
     }

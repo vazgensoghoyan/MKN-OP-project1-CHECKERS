@@ -31,6 +31,8 @@ readonly struct Figure
 
     public override string ToString()
     {
-        return ((int)Color).ToString() + ((int)Role).ToString();
+        if (Role == Role.None) return "-";
+        if (Color == Color.White) return "☻";
+        return "☺";
     }
 }
