@@ -2,7 +2,7 @@
 
 var a = new RussianDraughts();
 
-Console.WriteLine( RussianDraughts.GetTheRules() );
+//Console.WriteLine( RussianDraughts.GetTheRules() );
 
 Console.Write( a );
 
