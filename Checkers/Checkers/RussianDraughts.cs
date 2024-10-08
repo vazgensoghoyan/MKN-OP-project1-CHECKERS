@@ -1,6 +1,5 @@
 ﻿using static System.Math;
 using System.Text.RegularExpressions;
-using System.Runtime.ExceptionServices;
 
 namespace Checkers;
 
@@ -40,31 +39,15 @@ public class RussianDraughts
                 _board[row, col] = (row < 3) ? BlackMan : WhiteMan;
             }
         }
+
+        _board[2, 1] = BlackKing;
     }
 
     public bool IsGameOn() => _gameOn;
 
     public void NextMove()
     {
-        //foreach (var fig in FiguresOnDiagonal(1, 0, 0, 1))
-        //    Console.Write("{0} ", fig);
-        //Console.WriteLine();
-        //foreach (var fig in FiguresOnDiagonal(0, 1, 6, 7))
-        //    Console.Write("{0} ", fig);
-        //Console.WriteLine();
-        //foreach (var fig in FiguresOnDiagonal(3, 0, 0, 3))
-        //    Console.Write("{0} ", fig);
-        //Console.WriteLine();
-        //foreach (var fig in FiguresOnDiagonal(0, 3, 4, 7))
-        //    Console.Write("{0} ", fig);
-        //Console.WriteLine();
-        //foreach (var fig in FiguresOnDiagonal(5, 0, 0, 5))
-        //    Console.Write("{0} ", fig);
-        //Console.WriteLine();
-        //foreach (var fig in FiguresOnDiagonal(0, 5, 2, 7))
-        //    Console.Write("{0} ", fig);
-
-        try 
+        try
         {
             ReadMove(out int[] move);
 
@@ -74,13 +57,30 @@ public class RussianDraughts
 
             MoveThePiece(x, y, z, w);
 
-            Console.WriteLine("{0}    {1}\n", _shouldWhiteEat, _shouldBlackEat);
+            Console.WriteLine("{0}   {1}\n", _shouldWhiteEat, _shouldBlackEat);
         } 
         catch (Exception e)
         {
             Console.WriteLine( e.Message );
         }
         
+    }
+
+    private void ReadMove(out int[] m)
+    {
+        var s = Console.ReadLine();
+
+        if (s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s))
+            throw new IncorrectDataException();
+
+        var split = s.Split().Where(a => a.Length > 0).ToArray();
+
+        m = [ split[0][0] - 'a', split[0][1] - '1',
+              split[1][0] - 'a', split[1][1] - '1' ];
+
+        // human move -> indexes in array
+        (m[0], m[1]) = (7 - m[1], m[0]);
+        (m[2], m[3]) = (7 - m[3], m[2]);
     }
 
     private bool IsRightMove(int x, int y, int z, int w)
@@ -99,57 +99,100 @@ public class RussianDraughts
         if ( shouldEat != EatsOpponent(x, y, z, w) )
             throw new Exception("Надо съесть шашку противника!");
 
-        if ( IsMan(x, y) )
-        {
-            if ( !shouldEat && Abs(x - z) == 1 && (x > z) == _whitesMove )
-                return true;
+        if ( IsKing(x, y) )
+            return true;
 
-            if ( shouldEat && Abs(x - z) == 2 )
-                return true;
-        }
+        if ( !shouldEat && Abs(x - z) == 1 && (x > z) == _whitesMove )
+            return true;
+
+        if ( shouldEat && Abs(x - z) == 2 )
+            return true;
 
         throw new Exception("Неправильный ход!");
     }
 
-    private bool ShouldEat(int x, int y)
+    private void MoveThePiece(int x, int y, int z, int w)
     {
+        int d1 = (x < z) ? 1 : -1,
+            d2 = (y < w) ? 1 : -1;
 
-        return false;
+        int i = x + d1,
+            j = y + d2;
+
+        bool justEaten = false;
+
+        while (d1 * i < d1 * z)
+        {
+            if (_board[i, j] != None)
+            {
+                justEaten = true;
+                _board[i, j] = None;
+            }
+            i += d1;
+            j += d2;
+        }
+
+        _board[z, w] = _board[x, y];
+        _board[x, y] = None;
+
+        var isWhite = IsWhite(z, w);
+
+        if (z % 7 == 0 && ((z == 0) == isWhite))
+        {
+            _board[z, w] = isWhite ? WhiteKing : BlackKing;
+        }
+
+        _shouldWhiteEat = ShouldEat(Color.White);
+        _shouldBlackEat = ShouldEat(Color.Black);
+
+        if (!(justEaten && ShouldThePieceEat(z, w)))
+            _whitesMove = !_whitesMove;
     }
 
     private bool ShouldEat(Color color)
     {
-        for (int i = 1; i < 6; i += 2)
-        {
-            if ( ShouldEatOnDiagonal( i, 0, 0, i, color ) || ShouldEatOnDiagonal( 0, i, 7-i, 7, color ) ||
-                 ShouldEatOnDiagonal( 7-i, 7, 7, 7-i, color ) || ShouldEatOnDiagonal( 7, 7-i, i, 0, color) )
-            {
-                return true;
-            }
-        }
+        for (int i = 0; i < 8; ++i)
+            for (int j = 0; j < 8; ++j)
+                if ( IsThatColor(i, j, color) && ShouldThePieceEat(i, j) )
+                    return true;
 
-        return ShouldEatOnDiagonal( 7, 0, 0, 7, color );
+        return false;
     }
 
-    private bool ShouldEatOnDiagonal(int x, int y, int z, int w, Color color)
+    private bool ShouldThePieceEat(int x, int y)
     {
-        var diag = FiguresOnDiagonal(x, y, z, w);
+        if ( IsMan(x, y) )
+            return ShouldManEat(x, y);
 
-        for (int i = 1; i < diag.Length - 1; i++)
-        {
-            if ( diag[i].Color == color || diag[i].Color == Color.None ) continue;
+        if ( IsKing(x, y) )
+            return ShouldKingEat(x, y);
 
-            bool a = ( diag[i-1].Color == color && diag[i+1].Color == Color.None );
-            bool b = ( diag[i+1].Color == color && diag[i-1].Color == Color.None ); 
+        return false;
+    }
 
-            if ( a || b ) return true;
-        }
+    private bool ShouldManEat(int x, int y)
+    {
+        if ( x > 1 && y > 1 && EatsOpponent(x, y, x - 2, y - 2) )
+            return true;
+        if ( x > 1 && y < 6 && EatsOpponent(x, y, x - 2, y + 2) )
+            return true;
+        if ( x < 6 && y > 1 && EatsOpponent(x, y, x + 2, y - 2) )
+            return true;
+        if ( x < 6 && y < 6 && EatsOpponent(x, y, x + 2, y + 2) )
+            return true;
 
+        return false;
+    }
+
+    private bool ShouldKingEat(int x, int y)
+    {
         return false;
     }
 
     private bool EatsOpponent(int x, int y, int z, int w)
     {
+        if ( _board[z, w] != None ) return false;
+
         var diag = FiguresOnDiagonal(x, y, z, w);
 
         var ourColor = _board[x, y].Color;
@@ -166,6 +209,7 @@ public class RussianDraughts
             {
                 if ( diag[i - 1].Color == oppColor )
                     return false;
+
                 seen = true;
             }
         }
@@ -209,66 +253,13 @@ public class RussianDraughts
 
     private bool IsMan(int x, int y) => _board[x, y].Role == Role.Man;
 
+    private bool IsKing(int x, int y) => _board[x, y].Role == Role.King;
+
     private bool IsThatColor(int x, int y, Color color) => _board[x, y].Color == color;
 
     private bool IsWhite(int x, int y) => IsThatColor(x, y, Color.White);
 
     private bool IsBlack(int x, int y) => IsThatColor(x, y, Color.Black);
-
-    private void MoveThePiece(int x, int y, int z, int w)
-    {
-        int d1 = (x < z) ? 1 : -1,
-            d2 = (y < w) ? 1 : -1;
-
-        int i = x + d1,
-            j = y + d2;
-
-        bool justEaten = false;
-
-        while (d1 * i < d1 * z)
-        {
-            if (_board[i, j] != None)
-            {
-                justEaten = true;
-                _board[i, j] = None;
-            }
-            i += d1;
-            j += d2;
-        }
-
-        _board[z, w] = _board[x, y];
-        _board[x, y] = None;
-
-        var isWhite = IsWhite(x, y);
-
-        if (z % 7 == 0 && ((z == 0) == isWhite) )
-        {
-            _board[z, w] = isWhite ? WhiteKing : BlackKing;
-        }
-
-        _shouldWhiteEat = ShouldEat( Color.White );
-        _shouldBlackEat = ShouldEat( Color.Black );
-
-        if ( !( justEaten && ShouldEat(z, w) ) )
-            _whitesMove = !_whitesMove;
-    }
-
-    private void ReadMove(out int[] m)
-    {
-        var s = Console.ReadLine();
-
-        if ( s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s) )
-            throw new IncorrectDataException();
-
-        var split = s.Split().Where(a => a.Length > 0).ToArray();
-
-        m = [ split[0][0] - 'a', split[0][1] - '1', 
-              split[1][0] - 'a', split[1][1] - '1' ];
-        
-        // human move -> indexes in array
-        ( m[0], m[1] ) = ( 7 - m[1], m[0] );
-        ( m[2], m[3] ) = ( 7 - m[3], m[2] );
-    }
 
     public static string GetTheRules()
     {
@@ -288,7 +279,7 @@ public class RussianDraughts
 
     public override string ToString()
     {
-        var result = string.Empty;
+        var result = "\n";
 
         for (int i = 0; i < 8; i++)
         {
