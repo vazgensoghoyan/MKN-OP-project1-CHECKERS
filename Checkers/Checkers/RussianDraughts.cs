@@ -3,21 +3,16 @@ using System.Text.RegularExpressions;
 
 namespace Checkers;
 
-/*
- * TODO:
- * - End of the game
- * - Graphics a little?
- * - Text while playing
- */
-
 public class RussianDraughts
 {
     private Figure[,] _board;
 
-    private bool _gameOn;
+    public bool IsGameOn => _canWhiteMove && _canBlackMove;
     private bool _whitesMove;
     private bool _shouldWhiteEat;
     private bool _shouldBlackEat;
+    private bool _canWhiteMove;
+    private bool _canBlackMove;
 
     private static readonly Figure None = new(Color.None, Role.None);
     private static readonly Figure WhiteMan = new(Color.White, Role.Man);
@@ -30,9 +25,10 @@ public class RussianDraughts
         _board = new Figure[8, 8];
 
         _whitesMove = true;
-        _gameOn = true;
         _shouldWhiteEat = false;
         _shouldBlackEat = false;
+        _canWhiteMove = true;
+        _canBlackMove = true;
 
         for (int row = 0; row < 8; row++)
         {
@@ -46,30 +42,35 @@ public class RussianDraughts
                 _board[row, col] = (row < 3) ? BlackMan : WhiteMan;
             }
         }
-
-        _board[2, 1] = BlackKing;
     }
 
     public void StartGame(out Color whoWon)
     {
         Console.Write( GetTheRules() );
 
-        while ( IsGameOn() )
+        Console.Write(this);
+
+        while ( IsGameOn )
         {
-            Console.Write( this );
-            Console.Write( _whitesMove ? "Ход белых: " : "Ход черных: " );
             NextMove();
+
+            Console.Write(this);
         }
 
         whoWon = Color.None;
-    }
 
-    public bool IsGameOn() => _gameOn;
+        if ( _canWhiteMove && !_canBlackMove )
+            whoWon = Color.White;
+
+        if ( !_canWhiteMove && _canBlackMove )
+            whoWon = Color.Black;
+    }
 
     public void NextMove()
     {
         try
         {
+            Console.Write(_whitesMove ? "Ход белых: " : "Ход черных: ");
             ReadMove(out int[] move);
 
             var (x, y, z, w) = (move[0], move[1], move[2], move[3]);
@@ -77,19 +78,30 @@ public class RussianDraughts
             IsRightMove(x, y, z, w);
 
             MoveThePiece(x, y, z, w);
-
-            Console.WriteLine("{0}   {1}\n", _shouldWhiteEat, _shouldBlackEat);
-        } 
+        }
         catch (Exception e)
         {
             Console.WriteLine( e.Message );
         }
-        
     }
 
     private void ReadMove(out int[] m)
     {
         var s = Console.ReadLine();
+
+        if (s == "-1")
+        {
+            if ( _whitesMove )
+            {
+                _canWhiteMove = false;
+                throw new Exception("Белые сдались!");
+            }
+            else
+            {
+                _canBlackMove = false;
+                throw new Exception("Черные сдались!");
+            }
+        }
 
         if ( s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s) )
             throw new IncorrectDataException();
@@ -165,7 +177,48 @@ public class RussianDraughts
         _shouldBlackEat = ShouldEat(Color.Black);
 
         if ( !( justEaten && ShouldThePieceEat(z, w) ) )
+        {
             _whitesMove = !_whitesMove;
+        }
+        
+        if ( _whitesMove )
+            _canWhiteMove = CanDoSingleMove(Color.White) || _shouldWhiteEat;
+        else
+            _canBlackMove = CanDoSingleMove(Color.Black) || _shouldBlackEat;
+    }
+
+    private bool CanDoSingleMove(Color color)
+    {
+        var d1 = (color == Color.White) ? -1 : 1;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            for (int j = 0; j < 8; ++j)
+            {
+                if ( !IsThatColor(i, j, color) )
+                    continue;
+
+                if ( i + d1 > 0 && i + d1 < 8 ) 
+                {
+                    if ( j > 0 && IsEmpty(i + d1, j - 1) )
+                        return true;
+
+                    if ( j < 7 && IsEmpty(i + d1, j + 1) )
+                        return true;
+                }
+
+                if ( IsKing(i, j) && i - d1 > 0 && i - d1 < 8)
+                {
+                    if ( j > 0 && IsEmpty(i - d1, j - 1) )
+                        return true;
+
+                    if ( j < 7 && IsEmpty(i - d1, j + 1) )
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private bool ShouldEat(Color color)
