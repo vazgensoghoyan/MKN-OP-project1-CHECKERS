@@ -2,12 +2,6 @@
 
 var a = new RussianDraughts();
 
-//Console.WriteLine( RussianDraughts.GetTheRules() );
+a.StartGame(out Color whoWon);
 
-Console.Write( a );
-
-while (a.IsGameOn())
-{
-    a.NextMove();
-    Console.Write(a);
-}
+Console.WriteLine( whoWon + " won");

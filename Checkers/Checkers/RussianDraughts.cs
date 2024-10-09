@@ -3,6 +3,13 @@ using System.Text.RegularExpressions;
 
 namespace Checkers;
 
+/*
+ * TODO:
+ * - End of the game
+ * - Graphics a little?
+ * - Text while playing
+ */
+
 public class RussianDraughts
 {
     private Figure[,] _board;
@@ -43,6 +50,20 @@ public class RussianDraughts
         _board[2, 1] = BlackKing;
     }
 
+    public void StartGame(out Color whoWon)
+    {
+        Console.Write( GetTheRules() );
+
+        while ( IsGameOn() )
+        {
+            Console.Write( this );
+            Console.Write( _whitesMove ? "Ход белых: " : "Ход черных: " );
+            NextMove();
+        }
+
+        whoWon = Color.None;
+    }
+
     public bool IsGameOn() => _gameOn;
 
     public void NextMove()
@@ -70,7 +91,7 @@ public class RussianDraughts
     {
         var s = Console.ReadLine();
 
-        if (s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s))
+        if ( s is null || !new Regex("[a-h][1-8] [a-h][1-8]").IsMatch(s) )
             throw new IncorrectDataException();
 
         var split = s.Split().Where(a => a.Length > 0).ToArray();
@@ -123,7 +144,7 @@ public class RussianDraughts
 
         while (d1 * i < d1 * z)
         {
-            if (_board[i, j] != None)
+            if ( _board[i, j] != None )
             {
                 justEaten = true;
                 _board[i, j] = None;
@@ -135,17 +156,15 @@ public class RussianDraughts
         _board[z, w] = _board[x, y];
         _board[x, y] = None;
 
-        var isWhite = IsWhite(z, w);
-
-        if (z % 7 == 0 && ((z == 0) == isWhite))
+        if (z % 7 == 0 && ( (z == 0) == IsWhite(z, w) ))
         {
-            _board[z, w] = isWhite ? WhiteKing : BlackKing;
+            _board[z, w] = IsWhite(z, w) ? WhiteKing : BlackKing;
         }
 
         _shouldWhiteEat = ShouldEat(Color.White);
         _shouldBlackEat = ShouldEat(Color.Black);
 
-        if (!(justEaten && ShouldThePieceEat(z, w)))
+        if ( !( justEaten && ShouldThePieceEat(z, w) ) )
             _whitesMove = !_whitesMove;
     }
 
@@ -186,6 +205,41 @@ public class RussianDraughts
 
     private bool ShouldKingEat(int x, int y)
     {
+        var ourColor = _board[x, y].Color;
+        var oppColor = IsWhite(x, y) ? Color.Black : Color.White;
+
+        bool F(int d1, int d2)
+        {
+            int xx = x + d1,
+                yy = y + d2;
+
+            while (0 <= xx && xx < 8 && 0 <= yy && yy < 8)
+            {
+                if ( IsThatColor(xx, yy, ourColor) ) 
+                    return false;
+
+                if ( IsEmpty(xx, yy) && IsThatColor(xx - d1, yy - d2, oppColor) )
+                    return true;
+
+                xx += d1;
+                yy += d2;
+            }
+
+            return false;
+        }
+
+        if ( x < 6 && y < 6 && F(1, 1) )
+            return true;
+
+        if (x < 6 && y > 1 && F(1, -1))
+            return true;
+
+        if (x > 1 && y < 6 && F(-1, 1))
+            return true;
+
+        if (x > 1 && y > 1 && F(-1, -1))
+            return true;
+
         return false;
     }
 
