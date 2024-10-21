@@ -29,6 +29,16 @@ readonly struct Figure
 
     public static bool operator !=(Figure a, Figure b) => !(a == b);
 
+    public override bool Equals(object? obj)
+    {
+        if (obj is null || obj is not Figure) 
+            return false;
+
+        return this == (Figure)obj;
+    }
+
+    public override int GetHashCode() => HashCode.Combine(Color, Role);
+
     public override string ToString()
     {
         if (Role == Role.None) return "-";
